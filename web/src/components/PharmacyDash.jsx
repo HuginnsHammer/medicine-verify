@@ -2,6 +2,32 @@ import { useState, useEffect, useRef } from 'react'
 import { api } from '../api'
 import strings from '../strings.json'
 
+/**
+ * Releases a camera scanner without ever throwing.
+ *
+ * html5-qrcode's stop() is asynchronous but clear() is synchronous, and clear()
+ * throws the string "Cannot clear while scan is ongoing, close it first." if it
+ * runs while the scan is still live. Calling clear() immediately after an
+ * un-awaited stop() therefore throws inside the React cleanup, the camera is
+ * never released, and the video indicator stays on. stop() is awaited first,
+ * and both calls are guarded so neither a rejected promise nor a synchronous
+ * throw can escape.
+ */
+async function releaseScanner(scanner) {
+  if (!scanner) return;
+  try {
+    if (scanner.isScanning) await scanner.stop();
+  } catch {
+    /* already stopped or never started */
+  }
+  try {
+    const cleared = scanner.clear();
+    if (cleared && typeof cleared.catch === 'function') await cleared;
+  } catch {
+    /* viewport already cleared */
+  }
+}
+
 export default function PharmacyDash({ actor }) {
   const [serial, setSerial] = useState('');
   const [result, setResult] = useState(null);
@@ -12,19 +38,16 @@ export default function PharmacyDash({ actor }) {
 
   useEffect(() => {
     return () => {
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
-        scannerRef.current.clear();
-        scannerRef.current = null;
-      }
+      void releaseScanner(scannerRef.current);
+      scannerRef.current = null;
     };
   }, []);
 
   const startScanner = async () => {
     if (scannerRef.current) {
-      await scannerRef.current.stop().catch(() => {});
-      scannerRef.current.clear();
+      const previous = scannerRef.current;
       scannerRef.current = null;
+      await releaseScanner(previous);
     }
 
     setScanning(true);
@@ -46,7 +69,7 @@ export default function PharmacyDash({ actor }) {
           const match = decodedText.match(/\/v\/(.+)$/);
           if (match) scannedSerial = match[1];
 
-          scanner.stop().catch(() => {});
+          void releaseScanner(scanner);
           setScanning(false);
           handleDispense(scannedSerial);
         },
@@ -59,11 +82,9 @@ export default function PharmacyDash({ actor }) {
   };
 
   const stopScanner = async () => {
-    if (scannerRef.current) {
-      await scannerRef.current.stop().catch(() => {});
-      scannerRef.current.clear();
-      scannerRef.current = null;
-    }
+    const previous = scannerRef.current;
+    scannerRef.current = null;
+    await releaseScanner(previous);
     setScanning(false);
   };
 
@@ -85,7 +106,8 @@ export default function PharmacyDash({ actor }) {
     e.preventDefault();
     if (!serial.trim()) return;
     if (scannerRef.current) {
-      scannerRef.current.stop().catch(() => {});
+      void releaseScanner(scannerRef.current);
+      scannerRef.current = null;
       setScanning(false);
     }
     handleDispense(serial.trim());
