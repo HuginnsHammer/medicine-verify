@@ -5,7 +5,10 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const integrations = require('./integrations');
 const multer = require('multer');
-const upload = multer();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024, files: 1 }
+});
 
 const app = express();
 app.use(cors());
@@ -320,31 +323,76 @@ app.get('/api/verify/:serial', (req, res) => {
 
 app.post('/api/verify/ocr', upload.single('image'), async (req, res) => {
   const { serial } = req.body;
-  
+
+  if (!req.file) {
+    return res.status(400).json({ error: 'bad_request', message: 'An image file is required' });
+  }
+
   const pack = db.prepare('SELECT * FROM packs WHERE serial = ?').get(serial);
   if (!pack) {
     return res.status(404).json({ error: 'unknown_serial', message: 'No registered record found' });
   }
-  
+
   const batch = db.prepare('SELECT * FROM batches WHERE id = ?').get(pack.batchId);
 
-  const { batchNo, expiry, manufacturer, confidence } = await integrations.ocr.extractPackFields(req.file.buffer, req.file.mimetype);
-  
-  const { match, differences } = await integrations.ocr.comparePack(
-    { batchNo, expiry, manufacturer }, 
-    { batchNo: batch.batchNo, expiry: batch.expiry, manufacturer: 'Zenocare Labs' }
-  );
-
-  if (match === 'mismatch') {
-    db.prepare(`INSERT INTO alerts (serial, type, at) VALUES (?, 'ocr_mismatch', ?)`).run(serial, new Date().toISOString());
+  let fields;
+  try {
+    fields = await integrations.ocr.extractPackFields(req.file.buffer, req.file.mimetype);
+  } catch (err) {
+    console.error('OCR integration failed:', err);
+    return res.status(502).json({ error: 'ocr_unavailable', message: 'Image check is unavailable. Please try again.' });
   }
 
-  return res.status(200).json({ 
-    extracted: { batchNo, expiry, manufacturer }, 
-    confidence, 
-    match, 
-    differences 
+  let comparison;
+  try {
+    comparison = await integrations.ocr.comparePack(fields, batch);
+  } catch (err) {
+    console.error('OCR comparison failed:', err);
+    return res.status(502).json({ error: 'ocr_unavailable', message: 'Image check is unavailable. Please try again.' });
+  }
+
+  const { match, differences } = comparison;
+
+  if (match === 'mismatch') {
+    try {
+      db.prepare(`INSERT INTO alerts (serial, type, at) VALUES (?, 'ocr_mismatch', ?)`).run(serial, new Date().toISOString());
+    } catch (err) {
+      console.error('Failed to record OCR mismatch alert:', err);
+    }
+  }
+
+  return res.status(200).json({
+    extracted: fields,
+    confidence: fields.confidence,
+    match,
+    differences
   });
+});
+
+app.get('/api/alerts', requireAuth, (req, res) => {
+  if (req.actor.role !== 'regulator') {
+    return res.status(403).json({ error: 'forbidden', message: 'Only regulators can view alerts' });
+  }
+
+  const limit = Math.min(Number(req.query.limit) || 200, 1000);
+  const alerts = db.prepare(`
+    SELECT id, serial, type, at, details FROM alerts
+    ORDER BY at DESC, id DESC
+    LIMIT ?
+  `).all(limit);
+
+  return res.status(200).json(alerts);
+});
+
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    const message = err.code === 'LIMIT_FILE_SIZE'
+      ? 'Image is too large. Please upload a file under 8 MB.'
+      : err.message;
+    return res.status(400).json({ error: 'bad_request', message });
+  }
+  console.error('Unhandled server error:', err);
+  return res.status(500).json({ error: 'server_error', message: 'Unexpected server error' });
 });
 
 const PORT = process.env.PORT || 3001;
