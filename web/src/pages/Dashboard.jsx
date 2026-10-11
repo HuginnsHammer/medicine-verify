@@ -1,14 +1,21 @@
 import ManufacturerDash from '../components/ManufacturerDash.jsx'
-import DistributorDash from '../components/DistributorDash.jsx'
 import PharmacyDash from '../components/PharmacyDash.jsx'
-import RegulatorDash from '../components/RegulatorDash.jsx'
+import Distributor from './Distributor.jsx'
+import Regulator from './Regulator.jsx'
 
+/**
+ * Legacy combined entry point. The Part C role views from this branch
+ * (ManufacturerDash, PharmacyDash) are kept here; the distributor and
+ * regulator views live in pages/Distributor.jsx and pages/Regulator.jsx and
+ * take no props because they read the session from auth context.
+ */
 export default function Dashboard({ actor }) {
+  if (actor.role === 'distributor') return <Distributor />;
+  if (actor.role === 'regulator') return <Regulator />;
+
   const dashMap = {
     manufacturer: ManufacturerDash,
-    distributor: DistributorDash,
     pharmacy: PharmacyDash,
-    regulator: RegulatorDash,
   };
 
   const DashComponent = dashMap[actor.role];
