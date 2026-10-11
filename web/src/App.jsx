@@ -3,6 +3,7 @@ import RequireRole from './components/RequireRole.jsx';
 import { useAuth } from './auth.jsx';
 import { roleHome } from './utils.js';
 import Login from './pages/Login.jsx';
+import Dashboard from './pages/Dashboard.jsx';
 import Regulator from './pages/Regulator.jsx';
 import Verify from './pages/Verify.jsx';
 import Manufacturer from './pages/Manufacturer.jsx';
@@ -14,12 +15,26 @@ function Home() {
   return <Navigate to={actor ? roleHome(actor.role) : '/login'} replace />;
 }
 
+function RequireAnyRole({ children }) {
+  const { actor } = useAuth();
+  if (!actor) return <Navigate to="/login" replace />;
+  return children;
+}
+
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/v/:serial" element={<Verify />} />
+      <Route
+        path="/dashboard"
+        element={
+          <RequireAnyRole>
+            <Dashboard />
+          </RequireAnyRole>
+        }
+      />
       <Route
         path="/manufacturer"
         element={

@@ -115,4 +115,28 @@ export const api = {
   alerts() {
     return USE_MOCKS ? mockApi.alerts() : request('/api/alerts');
   },
+
+  // Aliases kept so components written against the Part C API surface in
+  // web/src/components and web/src/pages resolve to the single canonical
+  // implementation above. The endpoint path, transport and mock routing are
+  // identical; only the name differs.
+  registerBatch(payload) {
+    return api.createBatch(payload);
+  },
+
+  transferCustody(serials, toActorId) {
+    return api.transfer({ serials, toActorId });
+  },
+
+  verifySerial(serial) {
+    return api.verify(serial);
+  },
+
+  verifyOcr(file, serial) {
+    return api.ocr(serial, file);
+  },
+
+  getAlerts() {
+    return api.alerts();
+  }
 };
