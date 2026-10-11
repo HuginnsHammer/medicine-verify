@@ -56,8 +56,8 @@ export default function PublicVerify() {
       <h2 className="page-title">Pack Verification</h2>
 
       {/* Status Banner */}
-      <div className={`banner ${statusBannerClass[result.status] || 'banner-unknown'}`}>
-        {strings.status[result.status] || result.status}
+      <div className={`banner ${statusBannerClass[result.status] || 'banner-unknown'}`} role="status">
+        {strings.status[result.status] || strings.status.unknown}
       </div>
 
       {/* Serial */}
@@ -128,8 +128,8 @@ export default function PublicVerify() {
         {ocrError && <div className="banner banner-danger">{ocrError}</div>}
         {ocrResult && (
           <div style={{ marginTop: '0.75rem' }}>
-            <div className={`banner ${ocrResult.match === 'match' ? 'banner-ok' : ocrResult.match === 'mismatch' ? 'banner-danger' : 'banner-warning'}`}>
-              {strings.ocr[ocrResult.match] || ocrResult.match}
+            <div className={`banner ${ocrResult.match === 'match' ? 'banner-ok' : ocrResult.match === 'mismatch' ? 'banner-danger' : 'banner-warning'}`} role="status">
+              {strings.ocr[ocrResult.match] || strings.ocr.unreadable}
             </div>
             {ocrResult.extracted && (
               <div className="card">
