@@ -1,10 +1,15 @@
+// Mock OCR provider: no image analysis is performed.
+// Never report a successful match from a stub.
+
 const extractPackFields = async () => ({
-  dummyField: "dummyData",
-  confidence: 1
+  batchNo: '',
+  expiry: '',
+  manufacturer: '',
+  confidence: 0
 });
 
 const comparePack = async () => ({
-  match: "match",
+  match: 'unreadable',
   differences: []
 });
 

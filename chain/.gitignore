@@ -1,0 +1,7 @@
+node_modules/
+.env
+artifacts/
+cache/
+deployments.json
+coverage/
+*.db

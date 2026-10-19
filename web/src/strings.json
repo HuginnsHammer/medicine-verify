@@ -1,0 +1,16 @@
+{
+  "status": {
+    "registered": "Registered by manufacturer",
+    "in_custody": "In the supply chain, not yet dispensed",
+    "dispensed": "Dispensed",
+    "conflict": "Conflict: needs review",
+    "unknown": "No registered record found"
+  },
+  "ocr": {
+    "match": "Matches a registered record",
+    "mismatch": "Does not match",
+    "unreadable": "Could not read the pack clearly"
+  },
+  "disclaimer": "This check confirms a pack matches a registry record. It does not test the medicine inside.",
+  "forbiddenWords": ["genuine", "safe", "fake", "authentic"]
+}

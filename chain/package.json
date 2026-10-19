@@ -1,0 +1,20 @@
+{
+"name": "pack-registry",
+"version": "1.0.0",
+"description": "Blockchain-based medicine pack registration and counterfeit detection",
+"main": "wrapper.js",
+"scripts": {
+"test": "hardhat test",
+"compile": "hardhat compile",
+"deploy:local": "hardhat run deploy.js --network localhost",
+"demo": "node demo.js"
+},
+"devDependencies": {
+"@nomicfoundation/hardhat-toolbox": "^5.0.0",
+"hardhat": "^2.22.0"
+},
+"dependencies": {
+"dotenv": "^16.4.0",
+"ethers": "^6.17.0"
+}
+}
